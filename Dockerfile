@@ -6,9 +6,9 @@ RUN chmod +x /root/test.sh; dnf group install -y "Fedora Server Edition"; \
 	libblkid-devel libcap-devel libcurl-devel libgcrypt-devel \
 	libselinux-devel libxml2-devel libxslt-devel make openldap-devel \
 	pcre-devel perl-XML-Parser perl-XML-XPath perl-devel python-devel \
-	rpm-devel swig bzip2 bzip2-devel gcc git autoconf automake libtool \
-	doxygen git rubygems gawk fedpkg opendbx-devel python3-devel vim; \
-	dnf clean all
+	rpm-devel swig bzip2 bzip2-devel sendmail gcc git autoconf automake \
+	libtool doxygen git rubygems gawk fedpkg opendbx-devel python3-devel \
+	vim; dnf clean all
 
 STOPSIGNAL SIGRTMIN+3
 
