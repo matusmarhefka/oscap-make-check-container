@@ -3,16 +3,31 @@
 REQ_PACKAGES="openscap-containers docker atomic oci-systemd-hook oci-register-machine"
 
 print_help() {
-	echo -e "Usage:\n$0 build|test ...\n\n" \
+	echo -e "Usage:\n$0 build|distcheck ...\n\n" \
 	"  build DOCKER_IMG_NAME\n" \
 	"    DOCKER_IMG_NAME is a new image which will be built based on\n" \
-	"    Fedora image. All the dependencies for running openscap testing\n" \
-	"    will be installed inside this image. Also the test.sh script\n" \
+	"    Fedora image. All the dependencies for running openscap distcheck\n" \
+	"    will be installed inside this image. Also distcheck.sh script\n" \
 	"    will be copied into the /root directory inside the DOCKER_IMG_NAME\n" \
 	"    image.\n" \
-	"  test DOCKER_IMG_NAME\n" \
+	"  distcheck DOCKER_IMG_NAME\n" \
 	"    Runs a container from the DOCKER_IMG_NAME image and executes the\n" \
-	"    /root/test.sh script inside the container.\n"
+	"    /root/distcheck.sh script inside the container.\n"
+}
+
+check_requirements() {
+	# Makes sure that required packages are installed and docker is running.
+	rpm -q $REQ_PACKAGES >/dev/null
+	if [ $? -ne 0 ]; then
+		echo "Error: Required packages are missing" 1>&2
+		echo -e "This script requires:\n$REQ_PACKAGES" 1>&2
+		exit 1
+	fi
+	systemctl show docker | grep -iq "activestate=active"
+	if [ $? -ne 0 ]; then
+		echo "Error: docker service is not running" 1>&2
+		exit 1
+	fi
 }
 
 
@@ -20,26 +35,30 @@ if [ -z "$1" ] || [ "$1" = "help" ] || [ "$1" = "-h" ] || [ -z "$2" ]; then
 	print_help
 	exit 0
 fi
+check_requirements
 
 
 if [ "$1" = "build" ]; then
-	rpm -q $REQ_PACKAGES >/dev/null
-	if [ $? -ne 0 ]; then
-		echo "+++ Installing required packages.."
-		dnf install -y $REQ_PACKAGES
+	if [ ! -f "Dockerfile" ]; then
+		echo "Error: No Dockerfile found in $(pwd)" 1>&2
+		exit 1
 	fi
-	systemctl show docker | grep -iq "activestate=active" \
-		|| systemctl start docker
-	echo "+++ Building $2 container image.."
+	if [ ! -f "distcheck.sh" ]; then
+		echo "Error: No distcheck.sh found in $(pwd)" 1>&2
+		exit 1
+	fi
+	echo "---> Building $2 container image"
 	docker build -t $2 .
-elif [ "$1" = "test" ]; then
-	echo "+++ Running $2 container image.."
+elif [ "$1" = "distcheck" ]; then
+	echo "---> Running $2 container image"
 	CONT=$(docker run -dt $2)
 	CONT_SHORT_SHA=$(echo $CONT | cut -b 1-12)
 	sleep 2
-	echo "+++ Executing /root/test.sh script inside $CONT_SHORT_SHA container.."
-	docker exec -t $CONT /root/test.sh
-	docker rm -f $CONT
+	echo "---> Executing /root/distcheck.sh inside $CONT_SHORT_SHA container"
+	docker exec -t $CONT \
+		bash -c "/root/distcheck.sh 2>&1 | tee /root/distcheck.log"
+	echo "---> To see log from distcheck in $CONT_SHORT_SHA container run:"
+	echo "---> docker exec -it $CONT_SHORT_SHA vim /root/distcheck.log"
 else
 	print_help
 	exit 1
