@@ -1,4 +1,4 @@
-FROM fedora
+FROM fedora:26
 
 COPY distcheck.sh /root/distcheck.sh
 RUN chmod +x /root/distcheck.sh; \
