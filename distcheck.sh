@@ -13,13 +13,10 @@ cd openscap
 source <( rpm --eval '%configure --enable-sce' )
 make
 
-# DISABLES SOME NON-FUNCTIONAL TESTS BEFORE RUNNING 'make check':
-# tests/probes/sysctl (in both VM and container because of bug):
-sed -i 's|.*test_sysctl_probe_all.sh.*|#&|' tests/probes/sysctl/all.sh
-
 # Sendmail service is required by tests/mitre.
 systemctl start sendmail.service
 make distcheck
+rv=$?
 
 set +x
-exit 0
+exit $rv
