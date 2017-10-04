@@ -51,7 +51,9 @@ if [ "$1" = "build" ]; then
 	docker build -t $2 .
 elif [ "$1" = "distcheck" ]; then
 	echo "---> Running $2 container image"
-	CONT=$(docker run -dt $2)
+	#TODO: remove --privileged as soon as the bug with container-selinux is
+	# resolved: https://bugzilla.redhat.com/show_bug.cgi?id=1477138
+	CONT=$(docker run -dt --privileged $2)
 	CONT_SHORT_SHA=$(echo $CONT | cut -b 1-12)
 	sleep 2
 	echo "---> Executing /root/distcheck.sh inside $CONT_SHORT_SHA container"
